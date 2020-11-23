@@ -298,15 +298,30 @@ disable it otherwise."
   (interactive "P")
   (webkit--enable-javascript (or webkit-id webkit--id) enable))
 
+(defvar-local webkit-state 'normal
+  "Current typing state.
+In `normal' state, key events are handled by Emacs.
+In `insert', all key events are sent to Webkit to handle.
+Press C-g to return from `insert' to `normal'.")
+
 (defun webkit-insert-mode (&optional webkit-id)
   (interactive)
-  (message "Entering webkit insert mode, press C-g to exit")
+  (setq webkit-state 'insert)
+  (force-mode-line-update)
   (webkit--focus (or webkit-id webkit--id)))
 
 (defun webkit--callback-unfocus (val)
   (ignore val)
-  (message "C-g pressed in webkit... exiting insert mode")
+  (setq webkit-state 'normal)
+  (force-mode-line-update)
   (webkit--unfocus webkit--id))
+
+(defun webkit--format-state ()
+  "Return a string describing `webkit-state' for display in the modeline."
+  (pcase webkit-state
+    ('normal (propertize "NORMAL " 'face 'font-lock-doc-face))
+    ('insert (propertize "INSERT " 'face 'warning))
+    (_ "??? ")))
 
 (defun webkit--load-finished (msg)
   (ignore msg)
@@ -476,7 +491,7 @@ the default webkit buffer."
     (webkit-browse-url (eww--dwim-expand-url url) (eq arg 4))))
 
 (define-derived-mode webkit-mode special-mode
-  '("" webkit--progress-formatted (:eval (webkit--format-state)) "WebKit")
+  '("" webkit--progress-formatted "WebKit")
   "webkit view mode."
   (setq buffer-read-only nil))
 
